@@ -101,10 +101,9 @@ class GitArtifact(EventListener):
         code_request.append_markdown(create_diff_description)
         create_diff_code = f"""
         with tempfile.NamedTemporaryFile(mode='w+', delete=True) as tmpfile:
-            tmpfile.write("""
+            tmpfile.write(""" + '"""' + """
         {event.change.patch_set}
-            """)
-        """
+        """ + '"""' + """)
         code_request.append_code(create_diff_code)
         git_stash_push_description = f"""
         ## git stash
