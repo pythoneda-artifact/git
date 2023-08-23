@@ -103,7 +103,7 @@ class GitArtifact(EventListener):
         with tempfile.NamedTemporaryFile(mode='w+', delete=True) as tmpfile:
             tmpfile.write(""" + '"""' + """
         {event.change.patch_set}
-        """ + '"""' + """)
+        """ + '""")'
         code_request.append_code(create_diff_code)
         git_stash_push_description = f"""
         ## git stash
