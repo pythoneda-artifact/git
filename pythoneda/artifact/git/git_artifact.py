@@ -21,7 +21,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 from pythoneda import attribute, listen, sensitive, Event, EventEmitter, EventListener, Ports
 from pythoneda.shared.artifact_changes import Change
 from pythoneda.shared.artifact_changes.events import ChangeStagingCodeDescribed, ChangeStagingCodeRequested
-from pythoneda.shared.code_requests import Dependency
+from pythoneda.shared.code_requests import PythonedaDependency
 from pythoneda.shared.code_requests.jupyter import JupyterCodeRequest
 from pythoneda.shared.git import GitDiff, GitRepo
 from typing import List, Type
@@ -70,12 +70,11 @@ class GitArtifact(EventListener):
         :return: A request to stage changes.
         :rtype: pythoneda.shared.artifact_changes.events.ChangeStagingCodeDescribed
         """
-        GitArtifact.logger().info(f"Received {event}")
         event_emitter = Ports.instance().resolve(EventEmitter)
         code_request = JupyterCodeRequest()
         dependencies = [
-            Dependency("pythoneda-shared-pythoneda-domain", "0.0.1a38", "github:pythoneda-shared-pythoneda/domain-artifact/0.0.1a38?dir=domain"),
-            Dependency("pythoneda-shared-git", "0.0.1a15", "github:pythoneda-shared-git/shared-artifact/0.0.1a15?dir=shared"),
+            PythonedaDependency("pythoneda-shared-pythoneda-domain", "0.0.1a38", "github:pythoneda-shared-pythoneda/domain-artifact/0.0.1a38?dir=domain"),
+            PythonedaDependency("pythoneda-shared-git-shared", "0.0.1a15", "github:pythoneda-shared-git/shared-artifact/0.0.1a15?dir=shared"),
         ]
 
         introduction = f"""
@@ -155,6 +154,6 @@ class GitArtifact(EventListener):
         """
         code_request.append_code(git_add_code, dependencies)
         result = ChangeStagingCodeDescribed(code_request, event.id)
-        GitArtifact.logger().info(f"Emitting {type(result)}")
+        GitArtifact.logger().info(f"Emitting {result}")
         await event_emitter.emit(result)
         return result
