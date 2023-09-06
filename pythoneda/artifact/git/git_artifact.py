@@ -73,8 +73,8 @@ class GitArtifact(EventListener):
         event_emitter = Ports.instance().resolve(EventEmitter)
         code_request = JupyterCodeRequest()
         dependencies = [
-            PythonedaDependency("pythoneda-shared-pythoneda-domain", "0.0.1a38", "github:pythoneda-shared-pythoneda/domain-artifact/0.0.1a38?dir=domain"),
-            PythonedaDependency("pythoneda-shared-git-shared", "0.0.1a15", "github:pythoneda-shared-git/shared-artifact/0.0.1a15?dir=shared"),
+            PythonedaDependency("pythoneda-shared-pythoneda-domain", "0.0.1a40", "github:pythoneda-shared-pythoneda/domain-artifact/0.0.1a40?dir=domain"),
+            PythonedaDependency("pythoneda-shared-git-shared", "0.0.1a17", "github:pythoneda-shared-git/shared-artifact/0.0.1a17?dir=shared"),
         ]
 
         introduction = f"""
