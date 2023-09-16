@@ -70,90 +70,117 @@ class GitArtifact(EventListener):
         :return: A request to stage changes.
         :rtype: pythoneda.shared.artifact_changes.events.ChangeStagingCodeDescribed
         """
-        event_emitter = Ports.instance().resolve(EventEmitter)
         code_request = JupyterCodeRequest()
         dependencies = [
-            PythonedaDependency("pythoneda-shared-pythoneda-domain", "0.0.1a40", "github:pythoneda-shared-pythoneda/domain-artifact/0.0.1a40?dir=domain"),
-            PythonedaDependency("pythoneda-shared-git-shared", "0.0.1a17", "github:pythoneda-shared-git/shared-artifact/0.0.1a17?dir=shared"),
+            PythonedaDependency("pythoneda-shared-pythoneda-domain", "latest"),
+            PythonedaDependency("pythoneda-shared-git-shared", "latest"),
+            PythonedaDependency("pythoneda-shared-pythoneda-infrastructure", "latest"),
+            PythonedaDependency("pythoneda-shared-pythoneda-application", "latest"),
+            PythonedaDependency("pythoneda-shared-code-requests-shared", "latest"),
+            PythonedaDependency("pythoneda-shared-code-requests-events", "latest"),
+            PythonedaDependency("pythoneda-shared-code-requests-infrastructure", "latest"),
+            PythonedaDependency("pythoneda-shared-artifact-changes-shared", "latest"),
+            PythonedaDependency("pythoneda-shared-artifact-changes-events", "latest"),
+            PythonedaDependency("pythoneda-shared-artifact-changes-infrastructure", "latest"),
+            PythonedaDependency("pythoneda-shared-nix-flake-shared", "latest")
         ]
 
         introduction = f"""
-        # Git add
-        This is a request to add changes to the staging area in {event.change.repository_folder} (cloned from {event.change.repository_url}, branch {event.change.branch}).
-        The changes are the following:
-        {event.change.unidiff_text}
+# Git add
+This is a request to add changes to the staging area in {event.change.repository_folder} (cloned from {event.change.repository_url}, branch {event.change.branch}).
+The changes are the following:
+```
+{event.change.unidiff_text}
+```
         """
         code_request.append_markdown(introduction)
         git_import_description = f"""
-        ## Dependencies
-        This code requires some dependencies from https://github.com/pythoneda-shared-git/shared:
-        """
+## Dependencies
+This code requires some dependencies from https://github.com/pythoneda-shared-git/shared:
+"""
         code_request.append_markdown(git_import_description)
         git_import_code = f"""
-        import logging
-        from pythoneda.shared.git import GitAdd, GitAddFailed, GitApply, GitApplyFailed, GitStash, GitStashFailed
-        import tempfile
+import logging
+from pythoneda.shared.git import GitAdd, GitAddFailed, GitApply, GitApplyFailed, GitStash, GitStashFailed
+import tempfile
 
-        no_error_so_far = True
+no_error_so_far = True
         """
         code_request.append_code(git_import_code, dependencies)
         create_diff_description = f"""
-        ## Creating the diff file
-        The contents we want to add to the staging area are as follows:
-        ```
-        {event.change.patch_set}
-        ```
+## Creating the diff file
+To create a patch with the differences, we'll use a temporary file.
         """
         code_request.append_markdown(create_diff_description)
         create_diff_code = f"""
-        with tempfile.NamedTemporaryFile(mode='w+', delete=True) as tmpfile:
-            tmpfile.write(""" + '"""' + """
-        {event.change.patch_set}
-        """ + '""")'
+with tempfile.NamedTemporaryFile(mode='w+', delete=True) as tmpfile:
+    tmpfile.write(\"\"\"{event.change.patch_set}\"\"\")
+        """
         code_request.append_code(create_diff_code, dependencies)
         git_stash_push_description = f"""
-        ## git stash
-        Git stash lets us keep the current changes in a safe place.
+## git stash
+Git stash lets us keep the current changes in a safe place.
         """
         code_request.append_markdown(git_stash_push_description)
         git_stash_push_code = f"""
-            stash_id = ""
-            try:
-                stash_id = GitStash("{event.change.repository_folder}").push()
-            except GitStashFailed as err:
-                no_error_so_far = False
-                logging.getLogger("{event.id}").error(err)
+    stash_id = ""
+    try:
+        stash_id = GitStash("{event.change.repository_folder}").push()
+    except GitStashFailed as err:
+        no_error_so_far = False
+        logging.getLogger("{event.id}").error(err)
         """
         code_request.append_code(git_stash_push_code, dependencies)
         git_apply_description = """
-        ## git apply
-        Now, lets apply the requested changes to the repository.
+## git apply
+Now, lets apply the requested changes to the repository.
         """
         code_request.append_markdown(git_apply_description)
         git_apply_code = f"""
-            if no_error_so_far:
-                try:
-                    GitApply("{event.change.repository_folder}").apply()
-                except GitApplyFailed as err:
-                    no_error_so_far = False
-                    logging.getLogger("{event.id}").error(err)
+    if no_error_so_far:
+        try:
+            GitApply("{event.change.repository_folder}").apply(tmpfile)
+        except GitApplyFailed as err:
+            no_error_so_far = False
+            logging.getLogger("{event.id}").error(err)
         """
         code_request.append_code(git_apply_code, dependencies)
         git_add_description = f"""
-        ## git add
-        Finally, we need to add the changes to the staging area.
+## git add
+The last step is adding the changes to the staging area.
         """
         code_request.append_markdown(git_add_description)
         git_add_code = f"""
-            if no_error_so_far:
-                try:
-                    GitAdd("{event.change.repository_folder}").add()
-                except GitAddFailed as err:
-                    no_error_so_far = False
-                    logging.getLogger("{event.id}").error(err)
+    if no_error_so_far:
+        try:
+            GitAdd("{event.change.repository_folder}").add()
+        except GitAddFailed as err:
+            no_error_so_far = False
+            logging.getLogger("{event.id}").error(err)
+        """
+        code_request.append_code(git_add_code, dependencies)
+        git_add_description = f"""
+## Emit event
+Finally, let's emit the event that this code has been executed successfully.
+        """
+        code_request.append_markdown(git_add_description)
+        git_add_code = f"""
+async def emit_event(event):
+    from pythoneda import EventEmitter, Ports
+    from pythoneda.shared.artifact_changes import Change
+    from pythoneda.shared.artifact_changes.events import ChangeStaged
+
+    await Ports.instance().resolve(EventEmitter).emit(
+        ChangeStaged(
+            Change.from_json(
+                '{event.change.to_json()}'),
+                '{event.id}'))
+
+if no_error_so_far:
+    asyncio.run(emit_event())
         """
         code_request.append_code(git_add_code, dependencies)
         result = ChangeStagingCodeDescribed(code_request, event.id)
-        GitArtifact.logger().info(f"Emitting {result}")
-        await event_emitter.emit(result)
+        GitArtifact.logger("pythoneda.artifact.git.GitArtifact").info(f"Emitting {result}")
+        await Ports.instance().resolve(EventEmitter).emit(result)
         return result
