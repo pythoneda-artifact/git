@@ -22,7 +22,7 @@ from pythoneda import attribute, listen, sensitive, Event, EventEmitter, EventLi
 from pythoneda.shared.artifact_changes import Change
 from pythoneda.shared.artifact_changes.events import ChangeStagingCodeDescribed, ChangeStagingCodeRequested
 from pythoneda.shared.code_requests import PythonedaDependency
-from pythoneda.shared.code_requests.jupyter import JupyterCodeRequest
+from pythoneda.shared.code_requests.jupyterlab import JupyterlabCodeRequest
 from pythoneda.shared.git import GitDiff, GitRepo
 from typing import List, Type
 
@@ -70,19 +70,26 @@ class GitArtifact(EventListener):
         :return: A request to stage changes.
         :rtype: pythoneda.shared.artifact_changes.events.ChangeStagingCodeDescribed
         """
-        code_request = JupyterCodeRequest()
+        code_request = JupyterlabCodeRequest()
         dependencies = [
-            PythonedaDependency("pythoneda-shared-pythoneda-domain", "latest"),
-            PythonedaDependency("pythoneda-shared-git-shared", "latest"),
-            PythonedaDependency("pythoneda-shared-pythoneda-infrastructure", "latest"),
-            PythonedaDependency("pythoneda-shared-pythoneda-application", "latest"),
-            PythonedaDependency("pythoneda-shared-code-requests-shared", "latest"),
-            PythonedaDependency("pythoneda-shared-code-requests-events", "latest"),
-            PythonedaDependency("pythoneda-shared-code-requests-infrastructure", "latest"),
-            PythonedaDependency("pythoneda-shared-artifact-changes-shared", "latest"),
+            PythonedaDependency("dbus-next", "latest"),
+            PythonedaDependency("grpcio", "latest"),
+            PythonedaDependency("jupyterlab", "latest"),
             PythonedaDependency("pythoneda-shared-artifact-changes-events", "latest"),
-            PythonedaDependency("pythoneda-shared-artifact-changes-infrastructure", "latest"),
-            PythonedaDependency("pythoneda-shared-nix-flake-shared", "latest")
+            PythonedaDependency("pythoneda-shared-artifact-changes-events-infrastructure", "latest"),
+            PythonedaDependency("pythoneda-shared-artifact-changes-shared", "latest"),
+            PythonedaDependency("pythoneda-shared-code-requests-events", "latest"),
+            PythonedaDependency("pythoneda-shared-code-requests-events-infrastructure", "latest"),
+            PythonedaDependency("pythoneda-shared-code-requests-shared", "latest"),
+            PythonedaDependency("pythoneda-shared-git-shared", "latest"),
+            PythonedaDependency("pythoneda-shared-nix-flake-shared", "latest"),
+            PythonedaDependency("pythoneda-shared-pythoneda-application", "latest"),
+            PythonedaDependency("pythoneda-shared-pythoneda-banner", "latest"),
+            PythonedaDependency("pythoneda-shared-pythoneda-domain", "latest"),
+            PythonedaDependency("pythoneda-shared-pythoneda-infrastructure", "latest"),
+            PythonedaDependency("requests", "latest"),
+            PythonedaDependency("stringtemplate3", "latest"),
+            PythonedaDependency("unidiff", "latest"),
         ]
 
         introduction = f"""
@@ -139,7 +146,7 @@ Now, lets apply the requested changes to the repository.
         git_apply_code = f"""
     if no_error_so_far:
         try:
-            GitApply("{event.change.repository_folder}").apply(tmpfile)
+            GitApply("{event.change.repository_folder}").apply(tmpfile.name)
         except GitApplyFailed as err:
             no_error_so_far = False
             logging.getLogger("{event.id}").error(err)
@@ -153,7 +160,7 @@ The last step is adding the changes to the staging area.
         git_add_code = f"""
     if no_error_so_far:
         try:
-            GitAdd("{event.change.repository_folder}").add()
+            GitAdd("{event.change.repository_folder}").add_all()
         except GitAddFailed as err:
             no_error_so_far = False
             logging.getLogger("{event.id}").error(err)
@@ -165,7 +172,7 @@ Finally, let's emit the event that this code has been executed successfully.
         """
         code_request.append_markdown(git_add_description)
         git_add_code = f"""
-async def emit_event(event):
+async def emit_event():
     from pythoneda import EventEmitter, Ports
     from pythoneda.shared.artifact_changes import Change
     from pythoneda.shared.artifact_changes.events import ChangeStaged
@@ -177,10 +184,10 @@ async def emit_event(event):
                 '{event.id}'))
 
 if no_error_so_far:
-    asyncio.run(emit_event())
+    await emit_event()
         """
         code_request.append_code(git_add_code, dependencies)
         result = ChangeStagingCodeDescribed(code_request, event.id)
-        GitArtifact.logger("pythoneda.artifact.git.GitArtifact").info(f"Emitting {result}")
+        GitArtifact.logger().info(f"Emitting {result}")
         await Ports.instance().resolve(EventEmitter).emit(result)
         return result
