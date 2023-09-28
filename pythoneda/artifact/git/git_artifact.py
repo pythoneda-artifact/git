@@ -24,7 +24,6 @@ from pythoneda.shared.artifact_changes import Change
 from pythoneda.shared.artifact_changes.events import ChangeStagingCodeDescribed, ChangeStagingCodeRequested
 from pythoneda.shared.code_requests import PythonedaDependency
 from pythoneda.shared.code_requests.jupyterlab import JupyterlabCodeRequest
-from pythoneda.shared.git import GitDiff, GitRepo
 from typing import List, Type
 
 class GitArtifact(EventListener):
@@ -116,10 +115,9 @@ This code requires some dependencies from https://github.com/pythoneda-shared-gi
 import asyncio
 import logging
 from pythoneda.artifact.code_request.application import PythonedaContext
-from pythoneda.shared.git import GitAdd, GitAddAllFailed, GitApply, GitApplyFailed, GitStash, GitStashFailed
+from pythoneda.shared.git import GitAdd, GitAddAllFailed, GitApply, GitApplyFailed, GitStash, GitStashPushFailed
 import tempfile
 
-no_error_so_far = True
         """
         code_request.append_code(git_import_code, dependencies)
         create_diff_description = f"""
@@ -133,33 +131,32 @@ patchfile.write({json.dumps(event.change.unidiff_text)})
 patchfile.close()
         """
         code_request.append_code(create_diff_code, dependencies)
-        git_stash_push_description = f"""
+        git_stash_description = f"""
 ## git stash
 Git stash lets us keep the current changes in a safe place.
         """
-        code_request.append_markdown(git_stash_push_description)
+        code_request.append_markdown(git_stash_description)
         git_stash_push_code = f"""
 stash_id = ""
 try:
     stash_id = GitStash("{event.change.repository_folder}").push()
     print(stash_id)
-except GitStashFailed as err:
-    no_error_so_far = False
+except GitStashPushFailed as err:
+    _pythoneda_no_error_so_far = False
     logging.getLogger("{event.id}").error(err)
         """
         code_request.append_code(git_stash_push_code, dependencies)
         git_apply_description = """
 ## git apply
-Now, lets apply the requested changes to the repository.
+Now, let's apply the requested changes to the repository.
         """
         code_request.append_markdown(git_apply_description)
         git_apply_code = f"""
-if no_error_so_far:
-    try:
-        GitApply("{event.change.repository_folder}").apply(patchfile.name)
-    except GitApplyFailed as err:
-        no_error_so_far = False
-        logging.getLogger("{event.id}").error(err)
+try:
+    GitApply("{event.change.repository_folder}").apply(patchfile.name)
+except GitApplyFailed as err:
+    _pythoneda_no_error_so_far = False
+    logging.getLogger("{event.id}").error(err)
         """
         code_request.append_code(git_apply_code, dependencies)
         git_add_description = f"""
@@ -168,12 +165,11 @@ The last step is adding the changes to the staging area.
         """
         code_request.append_markdown(git_add_description)
         git_add_code = f"""
-if no_error_so_far:
-    try:
-        GitAdd("{event.change.repository_folder}").add_all()
-    except GitAddAllFailed as err:
-        no_error_so_far = False
-        logging.getLogger("{event.id}").error(err)
+try:
+    GitAdd("{event.change.repository_folder}").add_all()
+except GitAddAllFailed as err:
+    _pythoneda_no_error_so_far = False
+    logging.getLogger("{event.id}").error(err)
         """
         code_request.append_code(git_add_code, dependencies)
         git_add_description = f"""
@@ -184,19 +180,22 @@ Finally, let's emit the event that this code has been executed successfully.
         git_add_code = f"""
 class CodeRequest(PythonedaContext):
 
-    async def after_bootstrap(self):
+    async def emit_event(self):
         from pythoneda import EventEmitter, Ports
         from pythoneda.shared.artifact_changes import Change
         from pythoneda.shared.artifact_changes.events import ChangeStaged
 
+        print("Emitting ChangeStaged event")
         await Ports.instance().resolve(EventEmitter).emit(
             ChangeStaged(
                 Change.from_json(
                     {json.dumps(event.change.to_json())}),
                 '{event.id}'))
-
-if no_error_so_far:
-    asyncio.run(CodeRequest.main("{event.id}"))
+        print("ChangeStaged event emitted!")
+import nest_asyncio
+nest_asyncio.apply()
+loop = asyncio.get_event_loop()
+loop.run_until_complete(CodeRequest.main("{event.id}"))
         """
         code_request.append_code(git_add_code, dependencies)
         result = ChangeStagingCodeDescribed(code_request, event.id)
