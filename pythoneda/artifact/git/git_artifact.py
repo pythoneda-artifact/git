@@ -19,12 +19,24 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 import json
-from pythoneda import attribute, listen, sensitive, Event, EventEmitter, EventListener, Ports
-from pythoneda.shared.artifact_changes import Change
-from pythoneda.shared.artifact_changes.events import ChangeStagingCodeDescribed, ChangeStagingCodeRequested
+from pythoneda import (
+    attribute,
+    listen,
+    sensitive,
+    Event,
+    EventEmitter,
+    EventListener,
+    Ports,
+)
+from pythoneda.shared.artifact import Change
+from pythoneda.shared.artifact.events.code import (
+    ChangeStagingCodeDescribed,
+    ChangeStagingCodeRequested,
+)
 from pythoneda.shared.code_requests import PythonedaDependency
 from pythoneda.shared.code_requests.jupyterlab import JupyterlabCodeRequest
 from typing import List, Type
+
 
 class GitArtifact(EventListener):
     """
@@ -61,7 +73,9 @@ class GitArtifact(EventListener):
 
     @classmethod
     @listen(ChangeStagingCodeRequested)
-    async def listen_ChangeStagingCodeRequested(cls, event: ChangeStagingCodeRequested) -> ChangeStagingCodeDescribed:
+    async def listen_ChangeStagingCodeRequested(
+        cls, event: ChangeStagingCodeRequested
+    ) -> ChangeStagingCodeDescribed:
         """
         Gets notified of a ChangeStagingCodeRequested event.
         Emits a ChangeStagingCodeDescribed event.
@@ -72,19 +86,29 @@ class GitArtifact(EventListener):
         """
         code_request = JupyterlabCodeRequest()
         if event.change.unidiff_text is None:
-            GitArtifact.logger().info(f"No changes to stage in folder {event.change.repository_folder}. Discarding request to describe staging code")
+            GitArtifact.logger().info(
+                f"No changes to stage in folder {event.change.repository_folder}. Discarding request to describe staging code"
+            )
             return
         dependencies = [
             PythonedaDependency("dbus-next", "latest"),
             PythonedaDependency("grpcio", "latest"),
             PythonedaDependency("jupyterlab", "latest"),
-            PythonedaDependency("pythoneda-artifact-code-request-application", "latest"),
-            PythonedaDependency("pythoneda-artifact-code-request-infrastructure", "latest"),
+            PythonedaDependency(
+                "pythoneda-artifact-code-request-application", "latest"
+            ),
+            PythonedaDependency(
+                "pythoneda-artifact-code-request-infrastructure", "latest"
+            ),
             PythonedaDependency("pythoneda-shared-artifact-changes-events", "latest"),
-            PythonedaDependency("pythoneda-shared-artifact-changes-events-infrastructure", "latest"),
+            PythonedaDependency(
+                "pythoneda-shared-artifact-changes-events-infrastructure", "latest"
+            ),
             PythonedaDependency("pythoneda-shared-artifact-changes-shared", "latest"),
             PythonedaDependency("pythoneda-shared-code-requests-events", "latest"),
-            PythonedaDependency("pythoneda-shared-code-requests-events-infrastructure", "latest"),
+            PythonedaDependency(
+                "pythoneda-shared-code-requests-events-infrastructure", "latest"
+            ),
             PythonedaDependency("pythoneda-shared-code-requests-shared", "latest"),
             PythonedaDependency("pythoneda-shared-git-shared", "latest"),
             PythonedaDependency("pythoneda-shared-nix-flake-shared", "latest"),
