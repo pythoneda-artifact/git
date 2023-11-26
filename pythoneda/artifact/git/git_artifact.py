@@ -28,7 +28,7 @@ from pythoneda import (
     EventListener,
     Ports,
 )
-from pythoneda.shared.artifact import Change
+from pythoneda.shared.artifact.events import Change
 from pythoneda.shared.artifact.events.code import (
     ChangeStagingCodeDescribed,
     ChangeStagingCodeRequested,
