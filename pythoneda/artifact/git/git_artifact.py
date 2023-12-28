@@ -28,14 +28,12 @@ from pythoneda import (
     EventListener,
     Ports,
 )
-from pythoneda.shared.artifact.events import Change
 from pythoneda.shared.artifact.events.code import (
     ChangeStagingCodeDescribed,
     ChangeStagingCodeRequested,
 )
 from pythoneda.shared.code_requests import PythonedaDependency
 from pythoneda.shared.code_requests.jupyterlab import JupyterlabCodeRequest
-from typing import List, Type
 
 
 class GitArtifact(EventListener):
@@ -87,7 +85,8 @@ class GitArtifact(EventListener):
         code_request = JupyterlabCodeRequest()
         if event.change.unidiff_text is None:
             GitArtifact.logger().info(
-                f"No changes to stage in folder {event.change.repository_folder}. Discarding request to describe staging code"
+                f"No changes to stage in folder {event.change.repository_folder}. Discarding request to describe "
+                f"staging code"
             )
             return
         dependencies = [
@@ -123,7 +122,8 @@ class GitArtifact(EventListener):
 
         introduction = f"""
 # Git add
-This is a request to add changes to the staging area in {event.change.repository_folder} (cloned from {event.change.repository_url}, branch {event.change.branch}).
+This is a request to add changes to the staging area in {event.change.repository_folder}
+(cloned from {event.change.repository_url}, branch {event.change.branch}).
 The changes are the following:
 ```
 {event.change.unidiff_text}
