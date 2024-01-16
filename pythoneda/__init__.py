@@ -1,3 +1,4 @@
+# vim: set fileencoding=utf-8
 """
 pythoneda/__init__.py
 
