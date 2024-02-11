@@ -71,6 +71,16 @@ class GitArtifact(EventListener):
         return cls._singleton
 
     @classmethod
+    @property
+    def url(cls) -> str:
+        """
+        Retrieves the url.
+        :return: Such url.
+        :rtype: str
+        """
+        return "https://github.com/pythoneda-artifact/git"
+
+    @classmethod
     @listen(ChangeStagingCodeRequested)
     async def listen_ChangeStagingCodeRequested(
         cls, event: ChangeStagingCodeRequested
@@ -227,6 +237,8 @@ loop.run_until_complete(CodeRequest.main("{event.id}"))
         GitArtifact.logger().info(f"Emitting {result}")
         await Ports.instance().resolve(EventEmitter).emit(result)
         return result
+
+
 # vim: syntax=python ts=4 sw=4 sts=4 tw=79 sr et
 # Local Variables:
 # mode: python
